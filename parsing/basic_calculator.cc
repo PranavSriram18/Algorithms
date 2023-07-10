@@ -1,6 +1,6 @@
-#include "basic_calculator.hh"
-
 #include <iostream>
+
+#include "basic_calculator.hh"
 
 int main() {
     BasicCalculator calculator;
