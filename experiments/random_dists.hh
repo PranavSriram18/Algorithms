@@ -16,16 +16,19 @@
  * repeats this process until it is impossible to pin any more points in this
  * way. What is the expected value of the number of pinned points? 
  * 
- * This class solves a slightly more general version of this problem using a 
- * Monte Carlo simulation. 
+ * This class allows approximately solving a slightly more general version of
+ * this problem, taking an arbitrary distance threshold as an input parameter,
+ * using a Monte Carlo simulation. 
 */
 class RandomPointSimulator {
 public:
     RandomPointSimulator() = default;
 
-    // Time complexity: O(kn), where n is number of iterations and k is answer.
-    // Note that k < n, so this is certainly O(n^2).
-    void runSimulation(
+    /**
+     Time complexity: O(kn), where n is number of iterations and k is answer. From experiments and from mathematical bounds, k is O(f^2),
+     where f = 1/dist. So total time complexity is O(nf^2).
+    */
+    int runSimulation(
         double dist,
         int iters,
         int printFreq
@@ -38,10 +41,11 @@ public:
                 points.push_back(point);
             }
 
-            if ((i % printFreq) == 0) {
+            if ((i % printFreq) == 0 || i == (iters - 1)) {
                 std::cout << "Iteration " << i << ": Placed " << points.size() << " points." << std::endl;
             }
         }
+        return points.size();
     }
 
 private:
