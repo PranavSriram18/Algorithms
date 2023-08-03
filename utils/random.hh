@@ -11,11 +11,11 @@ public:
     RandomGenerator() : gen_(std::random_device{}()), 
           uniform_dist_(0.0, 1.0) {}
 
-    Point randomPointInUnitCircle() {
+    Point randomPointInCircle(double radius) {
         // Generate random angle and random radius with square root scaling,
         // then convert from polar to Cartesian coords
         double theta = 2.0 * M_PI * uniform_dist_(gen_);
-        double r = sqrt(uniform_dist_(gen_));
+        double r = radius * sqrt(uniform_dist_(gen_));
         return {r * cos(theta), r * sin(theta)};
     }
 

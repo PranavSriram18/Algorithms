@@ -1,62 +1,71 @@
 
 #include "random_dists.hh"
 
-#include <unordered_map>
+#include <chrono>
+#include <map>
 
 /*
 Code for experiments using the RandomPointSimulator.
 We will often work with the inverse distance here, denoted f.
 */
 
-// f -> (average points, density)
-using ResultTable = std::unordered_map<double, std::pair<double, double>>;
+// radius -> (average points, density)
+using ResultTable = std::map<double, std::pair<double, double>>;
 
 // Number of runs of the simulation for a fixed distance
 const int kNumTrials = 10;
 
 // Iterations per simulation
-const int kNumIters = 1000000;
+const int kBaseNumIters = 100000;
 
 // Print frequency for simulator object
 const int kPrintFreq = 100000;
 
-void runExperiment(double f, RandomPointSimulator& rps,  ResultTable& table) {
-    double dist = 1.0 / f;
-    std::cout << "Running experiment with f = " << f << " (dist = " << dist << ")" << std::endl;  
+void runExperiment(double r, ResultTable& table) {
+    std::cout << "\nRunning experiment with radius = " << r << std::endl;  
     std::vector<int> results(kNumTrials);
+
+    auto start = std::chrono::high_resolution_clock::now();
     for (int it = 0; it < kNumTrials; ++it) {
         std::cout << "Running trial " << it << std::endl;
-        results[it] = rps.runSimulation(dist, kNumIters, kPrintFreq);
+        RandomPointSimulator rps(r);
+        // scale the number of iterations with the radius
+        results[it] = rps.runSimulation(kBaseNumIters * r, kPrintFreq);
     }
-    std::cout << "Result summary for f " << f << ":" << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+
+    std::cout << "Result summary for radius " << r << ":" << std::endl;
     double total = 0.0;
     for (int val : results) {
         total += val;
         std::cout << val << " ";
     }
     
-    double upperBound = (2.0 * f + 1.0) * (2.0 * f + 1.0);
+    double upperBound = (2.0 * r + 1.0) * (2.0 * r + 1.0);
     double average = total / kNumTrials;
     double density = average / upperBound;
     std::cout << "\nAverage points placed was " << average << std::endl;
     std::cout << "Corresponding density: " << average / upperBound;
-    table[f] = {average, density};
+    table[r] = {average, density};
+
+    // Print elapsed time
+    std::cout << "\nElapsed time for experiment: " << elapsed.count() << " seconds." << std::endl;
 }
 
 int main() {
-    RandomPointSimulator rps;
-    std::vector<double> invDistances {
+    std::vector<double> radii {
         1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 20.0, 50.0, 100.0
     };
     ResultTable table;
-    for (double f : invDistances) {
-        runExperiment(f, rps, table);
+    for (double r : radii) {
+        runExperiment(r, table);
     }
     // Print the result table
-    std::cout << "Result table: " << std::endl;
-    for (const auto& [f, resultPair] : table) {
+    std::cout << "\nResult table: " << std::endl;
+    for (const auto& [radius, resultPair] : table) {
         auto [avg, density] = resultPair;
-        std::cout << "f: " << f << " points: " << avg << " density: " << density << std::endl;
+        std::cout << "radius: " << radius << " points: " << avg << " density: " << density << std::endl;
     }
     return 0;
 }

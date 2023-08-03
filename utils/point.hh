@@ -9,6 +9,12 @@ public:
 
     Point(double x, double y) : x_(x), y_(y) {}
 
+    double x() const { 
+        return x_; 
+    }
+
+    double y() const { return y_; }
+
     double squaredDist(const Point& other) const {
         return (x_ - other.x_) * (x_ - other.x_) + (
             y_ - other.y_) * (y_ - other.y_);
@@ -18,6 +24,7 @@ public:
         return x_ == other.x_ && y_ == other.y_;
     }
 
+    // Note that this only defines a partial order
     bool operator<(const Point& other) {
         return x_ < other.x_ && y_ < other.y_;
     }
