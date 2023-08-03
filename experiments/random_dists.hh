@@ -2,6 +2,7 @@
 #include "../utils/point.hh"
 #include "../utils/random.hh"
 
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -19,7 +20,9 @@ public:
      Initializes a RandomPointSimulator object.
      \param radius The radius of the circular disk.
     */
-    RandomPointSimulator(double radius) : radius_(radius) {
+    RandomPointSimulator(
+        double radius, std::string outputFile = ""
+    ) : radius_(radius), outputFile_(outputFile) {
         // initialize the grid
         ceilRadius_ = static_cast<int>(std::ceil(radius_));
         int gridSize = 2 * ceilRadius_ + 1;
@@ -48,6 +51,7 @@ public:
                 std::cout << "Iteration " << i << ": Placed " << points_.size() << " points." << std::endl;
             }
         }
+        writePointsToFile();
         return points_.size();
     }
 
@@ -94,6 +98,19 @@ private:
         return true;
     }
 
+    void writePointsToFile() {
+        if (outputFile_.empty()) return;
+        std::ofstream file(outputFile_);
+        if (!file.is_open()) {
+            std::cerr << "Failed to open the file: " << outputFile_ << std::endl;
+            return;
+        }
+        for (const Point& point : points_) {
+            file << point.x() << " " << point.y() << "\n";
+        }
+        file.close();
+    }
+
     // Radius of the disk
     double radius_;
     int ceilRadius_;
@@ -108,5 +125,8 @@ private:
     RandomGenerator rg_;
 
     std::vector<Point> emptyVec_;
+
+    // Name of the 
+    std::string outputFile_;
 
 };  // class RandomPointGenerator

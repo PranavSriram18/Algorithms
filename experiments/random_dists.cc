@@ -26,11 +26,13 @@ void runExperiment(double r, ResultTable& table) {
     std::vector<int> results(kNumTrials);
 
     auto start = std::chrono::high_resolution_clock::now();
-    for (int it = 0; it < kNumTrials; ++it) {
-        std::cout << "Running trial " << it << std::endl;
-        RandomPointSimulator rps(r);
+    for (int trial = 0; trial < kNumTrials; ++trial) {
+        std::cout << "Running trial " << trial << std::endl;
+        std::string filename = "out/radius_" + std::to_string(
+            int(r)) + "_trial_" + std::to_string(trial) + ".txt";
+        RandomPointSimulator rps(r, filename);
         // scale the number of iterations with the radius
-        results[it] = rps.runSimulation(kBaseNumIters * r, kPrintFreq);
+        results[trial] = rps.runSimulation(kBaseNumIters * r, kPrintFreq);
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
@@ -55,7 +57,7 @@ void runExperiment(double r, ResultTable& table) {
 
 int main() {
     std::vector<double> radii {
-        1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 20.0, 50.0, 100.0
+        20.0, 50.0, 100.0
     };
     ResultTable table;
     for (double r : radii) {
