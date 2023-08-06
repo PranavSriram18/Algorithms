@@ -56,8 +56,9 @@ void runExperiment(double r, ResultTable& table) {
 }
 
 int main() {
+    // Modify these based on the radii you want to run with
     std::vector<double> radii {
-        20.0, 50.0, 100.0
+        200.0
     };
     ResultTable table;
     for (double r : radii) {

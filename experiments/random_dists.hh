@@ -33,8 +33,8 @@ public:
 
     /**
      Runs the simulation for the given number of iterations.
-     Time complexity: O(kn), where n is number of iterations and k is answer. From experiments and mathematical bounds, k is O(f^2),
-     where f = 1/dist. So total time complexity is O(nf^2).
+     Time complexity: O(n), where n is number of iterations, by using the grid
+     to ensure O(1) validation time.
     */
     int runSimulation(
         int iters,
@@ -42,7 +42,7 @@ public:
     ) {
         // Tracks the set of valid points placed
         for (int i = 0; i < iters; ++i) {
-            Point point = rg_.randomPointInCircle(radius_);  // TODO
+            Point point = rg_.randomPointInCircle(radius_);
             if (isValid(point)) {
                 addPoint(point);
             }
