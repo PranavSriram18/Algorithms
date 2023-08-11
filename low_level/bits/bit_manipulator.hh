@@ -1,5 +1,9 @@
 #pragma once
 
+/**
+ * This class includes functions for solving various problems involving 
+ * bit manipulation.
+*/
 class BitManipulator {
 public:
     /*
@@ -23,4 +27,29 @@ public:
         }
         return x;
     }
+
+    /**
+     * Given an integer x, returns the number of integers a in [1, x-1]
+     * that satisfy a ^ x > x.
+     * 
+     * Full problem description:
+     * https://www.hackerrank.com/challenges/the-great-xor/problem?isFullScreen=true
+     * 
+     * Level: Medium
+     * 
+     * Basic idea: Consider the position of the msb of a. That needs to be a 0
+     * in the binary representation of x. Once that is fixed, the bits to its 
+     * right can be anything. So just loop over 0-bits of x and add 2^bit for 
+     * each of those.
+    */
+    long theGreatXor(long x) {
+        long total = 0;
+        long mask = 1l;
+        while (mask <= x) {
+            total += ((x & mask) == 0) * mask;
+            mask <<= 1;
+        }
+        return total;
+    }
+
 };  // class BitManipulator
