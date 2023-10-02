@@ -62,7 +62,7 @@ private:
         // get score after k steps for each node
         int64_t best = 0;
         for (int node = 0; node < n_; ++node) {
-            best = max(best, f(k, node) + node);
+            best = std::max(best, f(k, node) + node);
         }
         return best;
     }
