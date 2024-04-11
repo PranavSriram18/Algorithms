@@ -126,7 +126,7 @@ private:
 
     std::vector<Point> emptyVec_;
 
-    // Name of the 
+    // Name of the output file
     std::string outputFile_;
 
 };  // class RandomPointGenerator
