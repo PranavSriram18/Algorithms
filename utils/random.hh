@@ -11,6 +11,11 @@ public:
     RandomGenerator() : gen_(std::random_device{}()), 
           uniform_dist_(0.0, 1.0) {}
 
+    int randomInt(int lo, int hi) {
+        static std::uniform_int_distribution<> dist(lo, hi);
+        return dist(gen_);
+    }
+
     double randomUniform(double a, double b) {
         return a + (b-a) * uniform_dist_(gen_);
     }

@@ -2,6 +2,10 @@
 
 #include <vector>
 
+/**
+ * Implements the UnionFind data structure with path compression and
+ * Union-by-Rank.
+*/
 class UnionFind {
 public:
     UnionFind(int n) {
@@ -33,6 +37,7 @@ public:
         }
     }
     
+    // O(n)
     std::vector<int> componentSizes() {
         std::vector<int> result;
         for (int node = 0; node < parents_.size(); ++node) {
