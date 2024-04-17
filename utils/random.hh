@@ -16,6 +16,15 @@ public:
         return dist(gen_);
     }
 
+    // Random vector of length n with values in [lo, hi]
+    std::vector<int> randomVec(int n, int lo, int hi) {
+        std::vector<int> vec(n);
+        for (int i = 0; i < n; ++i) {
+            vec[i] = randomInt(lo, hi);
+        }
+        return vec;
+    }
+
     double randomUniform(double a, double b) {
         return a + (b-a) * uniform_dist_(gen_);
     }
