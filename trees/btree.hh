@@ -41,12 +41,24 @@ public:
     }
 
     /**
-     * Prints keys owned by this node.
+     * Prints keys or values owned by this node.
+     * \param printKeys prints keys if true otherwise values
+     * \param includeTombstones includes keys/values in tombstones
+     * TODO - support includeTombstones
     */
-    void printNodeKeys() const {
+    void print(bool printKeys, bool includeTombstones) const {
         std::cout << "[";
-        for (const auto& key : keys_) {
-            std::cout << key << " ";
+        for (int i = 0; i < keys_.size(); ++i) {
+            bool tombstone = !values_[i].has_value();
+            if (!tombstone) {
+                if (printKeys) {
+                    std::cout << keys_[i] << " ";
+                } else {
+                    std::cout << values_[i].value() << " ";
+                }
+            } else {
+                std::cout << "* ";
+            }
         }
         std::cout << "] ";
     }
@@ -57,7 +69,7 @@ public:
     bool contains(const K& key) const {
         auto [owns, idx] = ownsKey(key);
         return (
-            owns ? true : (isLeaf() ? false : children_[idx].contains(key))
+            owns ? values_[idx].has_value() : (isLeaf() ? false : children_[idx].contains(key))
         );
     }
 
@@ -86,6 +98,156 @@ public:
             values_.insert(values_.begin() + idx, value);
             splitSelfIfNeeded();
         }
+    }
+
+    /**
+     * We want deletion from a node to be managed by the parent of the node.
+     * To achieve this, while searching for the key we keep track of:
+     * parent - the parent of this node, i.e. the node that dispatched this call
+     * prevIdx - the index of this node in parent's children_
+     * There are 3 cases: own key, dispatch to a child, or not found (do nothing)
+     * We also need to handle the case of deleting from the root separately
+    */
+    void deleteKey(const K& key, BTreeNode<K, V, B>* parent, int prevIdx) {
+        auto [owns, currIdx] = ownsKey(key);
+        if (owns) {
+            return (parent ? parent->deleteFromChild(
+                prevIdx, currIdx) : btree_->deleteFromRoot(currIdx));
+        }
+        if (!isLeaf()) return children_[currIdx].deleteKey(key, this, currIdx);
+    }
+
+    void deleteFromChild(int childIdx, int keyIdx) {
+        return children_[childIdx].isLeaf() ? deleteFromLeafChild(
+            childIdx, keyIdx) : deleteFromInternalChild(childIdx, keyIdx);
+    }
+
+    /**
+     * Deletes a key from a child that is a leaf.
+     * \param childIdx the index of the child node in children_
+     * \param keyIdx the index of the key in the child's keys_
+     * The main challenge with deleting from a leaf is maintaining the invariant
+     * that the node continues to have at least kMinKeys keys.
+    */
+    void deleteFromLeafChild(int childIdx, int keyIdx) {
+        auto& child = children_[childIdx];
+        if (child.keys_.size() > kMinKeys) {
+            child.keys_.erase(child.keys_.begin() + keyIdx);
+            child.values_.erase(child.values_.begin() + keyIdx);
+            //std::cout << "Successful delete " << std::endl;
+            return;
+        }
+        //std::cout << "Insufficient keys; attempting to borrow keys..." << std::endl;
+
+        // try borrowing a key from left sibling
+        if (childIdx) {
+            auto& leftSibling = children_[childIdx-1];
+            if (leftSibling.keys_.size() > kMinKeys) {
+                //std::cout << "Borrowing from left sibling " << std::endl;
+                child.keys_.erase(child.keys_.begin() + keyIdx);  // child key deletion
+                child.values_.erase(child.values_.begin() + keyIdx);
+                child.keys_.insert(child.keys_.begin(), keys_[childIdx-1]);  // parent->child
+                child.values_.insert(child.values_.begin(), values_[childIdx-1]);
+                keys_[childIdx-1] = leftSibling.keys_.back();  // leftSib->parent
+                values_[childIdx-1] = leftSibling.values_.back();
+                leftSibling.keys_.pop_back();  // leftSib deletion
+                leftSibling.values_.pop_back();
+                //std::cout << "Successfully borrowed key from left " << std::endl;
+                return;
+            }
+        }
+
+        // try borrowing a key from right sibling
+        // note the differences in indexing compared to left sibling case
+        if (childIdx+1 < children_.size()) {
+            auto& rightSibling = children_[childIdx+1];
+            if (rightSibling.keys_.size() > kMinKeys) {
+                //std::cout << "Borrowing from right sibling " << std::endl;
+                //std::cout << "Key idx: " << keyIdx << std::endl;
+                //std::cout << "About to erase " << child.keys_[keyIdx] << std::endl;
+                // std::cout << "Current state: " << std::endl;
+                // btree_->printKeys();
+                child.keys_.erase(child.keys_.begin() + keyIdx);  // child key deletion
+                child.values_.erase(child.values_.begin() + keyIdx);
+                child.keys_.insert(child.keys_.end(), keys_[childIdx]);  // parent->child
+                child.values_.insert(child.values_.end(), values_[childIdx]);
+                keys_[childIdx] = rightSibling.keys_[0];  // rightSib->parent
+                values_[childIdx] = rightSibling.values_[0];
+                rightSibling.keys_.erase(rightSibling.keys_.begin()); // rightSib deletion
+                rightSibling.values_.erase(rightSibling.values_.begin());
+                return;
+            }
+        }
+
+        if (keys_.size() <= kMinKeys) {
+            // Tombstone
+            child.values_[keyIdx] = std::optional<V>();
+            return;
+        }
+
+        if (childIdx) {
+            //std::cout << "Merging w left sibling " << std::endl;
+            auto& leftSibling = children_[childIdx-1];
+            // parent -> left
+            leftSibling.keys_.push_back(keys_[childIdx-1]);
+            leftSibling.values_.push_back(values_[childIdx-1]);
+
+            // parent key removal
+            keys_.erase(keys_.begin() + childIdx-1);
+            values_.erase(values_.begin() + childIdx-1);
+
+            // child key removal
+            child.keys_.erase(child.keys_.begin() + keyIdx);
+            child.values_.erase(child.values_.begin() + keyIdx);
+
+            // transfer child contents -> left
+            for (int i = 0; i < child.keys_.size(); ++i) {
+                leftSibling.keys_.push_back(child.keys_[i]);
+                leftSibling.values_.push_back(child.values_[i]);
+            }
+
+            // delete the child
+            children_.erase(children_.begin() + childIdx);
+            return;
+        }
+
+        // merge w right node
+        // std::cout << "Merging w right sibling " << std::endl;
+        auto& rightSibling = children_[childIdx+1];
+        
+        // child key removal
+        child.keys_.erase(child.keys_.begin() + keyIdx);
+        child.values_.erase(child.values_.begin() + keyIdx);
+
+        // transfer child contents -> right
+        std::vector<K> mergedKeys = child.keys_;
+        std::vector<std::optional<V>> mergedValues = child.values_;
+        mergedKeys.reserve(B-1);
+        mergedValues.reserve(B-1);
+
+        // parent -> right
+        mergedKeys.push_back(keys_[childIdx]);
+        mergedValues.push_back(values_[childIdx]);
+
+        // parent key removal
+        keys_.erase(keys_.begin() + childIdx);
+        values_.erase(values_.begin() + childIdx);
+
+        for (int i = 0; i < rightSibling.keys_.size(); ++i) {
+            mergedKeys.push_back(rightSibling.keys_[i]);
+            mergedValues.push_back(rightSibling.values_[i]);
+        }
+        rightSibling.keys_ = mergedKeys;
+        rightSibling.values_ = mergedValues;
+
+        // delete the child
+        children_.erase(children_.begin() + childIdx);
+        return;
+    }
+
+    void deleteFromInternalChild(int childIdx, int keyIdx) {
+        // tombstone
+        children_[childIdx].values_[keyIdx] = std::optional<V>();
     }
 
 protected:
@@ -131,7 +293,7 @@ protected:
      * Splits the child node containing the given key, and promotes the key.
      * \pre The caller is a full child of *this and contains midKey. 
     */
-    void splitChild(const K& midKey, const V& midValue) {
+    void splitChild(const K& midKey, const std::optional<V>& midValue) {
         // Promote the key, split child node, split self if needed
         auto [_, idx] = ownsKey(midKey);
         keys_.insert(keys_.begin() + idx, midKey);
@@ -178,14 +340,16 @@ protected:
         return keys_[B/2];
     }
 
-    const V& midValue() const {
+    const std::optional<V>& midValue() const {
         return values_[B/2];
     }
+
+    static constexpr int kMinKeys = (B+1)/2 - 1;
 
     BTree<K, V, B>* btree_;  // owning BTree
     std::vector<BTreeNode> children_;  // children of this node
     std::vector<K> keys_;  // keys stored in this node. At most B-1
-    std::vector<V> values_;  // values stored in this node
+    std::vector<std::optional<V>> values_;  // values stored in this node
 };  // class BTreeNode
 
 /**
@@ -210,6 +374,10 @@ public:
         root_.insert(key, value);
     }
 
+    void deleteKey(const K& key) {
+        root_.deleteKey(key, nullptr, -1);
+    }
+
     // Get the parent of the node containing the given key
     // This pointer is invalidated by any modification to the tree
     BTreeNode<K, V, B>* parent(const K& key) {
@@ -226,24 +394,12 @@ public:
     /**
      * Prints all the keys in the B-Tree using a level order traversal.
     */
-    void printKeys() {
-        std::cout << "\n\nPrinting keys: \n\n";
-        std::deque<std::pair<BTreeNode<K, V, B>, int>> q;
-        int currLevel = 0;
-        q.emplace_back(root_, currLevel);
-        while(q.size()) {
-            auto [currNode, newLevel] = q.front();
-            q.pop_front();
-            if (newLevel > currLevel) {
-                std::cout << "\n";
-                currLevel = newLevel;
-            }
-            currNode.printNodeKeys();
-            for (const auto& child : currNode.children_) {
-                q.emplace_back(child, currLevel+1);
-            }
-        }
-        std::cout << "\n\n";
+    void printKeys(bool includeTombstones=false) {
+        printLevelOrder(true, includeTombstones);
+    }
+    
+    void printValues(bool includeTombstones=true) {
+        printLevelOrder(false, includeTombstones);
     }
 
 protected:
@@ -256,6 +412,33 @@ protected:
         auto& oldRoot = root_.children_[0];
         return root_.splitChild(oldRoot.midKey(), oldRoot.midValue());
     }
+
+    void deleteFromRoot(int keyIdx) {
+        // tombstone
+        root_.values_[keyIdx] = std::optional<V>();
+    }
+
+    void printLevelOrder(bool printKeys, bool includeTombstones) {
+        std::string s = (printKeys ? "keys" : "values");
+        std::cout << "\n\nPrinting " << s << " (level-order): \n\n";
+        std::deque<std::pair<BTreeNode<K, V, B>, int>> q;
+        int currLevel = 0;
+        q.emplace_back(root_, currLevel);
+        while(q.size()) {
+            auto [currNode, newLevel] = q.front();
+            q.pop_front();
+            if (newLevel > currLevel) {
+                std::cout << "\n";
+                currLevel = newLevel;
+            }
+            currNode.print(printKeys, includeTombstones);
+            for (const auto& child : currNode.children_) {
+                q.emplace_back(child, currLevel+1);
+            }
+        }
+        std::cout << "\n\n";
+    }
+
     
     BTreeNode<K, V, B> root_;
 };  // class BTree
