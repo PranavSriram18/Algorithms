@@ -6,15 +6,141 @@
 #include <tuple>
 #include <vector>
 
+template<typename K, typename V, int B>
+class BTreeNode;  // Forward declaration of BTreeNode
+
 /**
- * The classes BTreeNode and BTree together implement a B-Tree.
+ * Implements a BTree. This is the class clients interface with, while internals
+ * are largely implemented by BTreeNode below.
+ * 
+ * This BTree can be used similarly to an associative container like std::map.
+ * You can insert key-value pairs, lookup keys, and delete keys.
+ * Example usage:
+ * BTree<int, int, 256> btree;
+ * btree.insert(1, 3);  // associate key 1 with value 3
+ * assert(btree.contains(1));  // the btree should contain key 1
+ * int v1 = btree.value(1).value_or(-1);  // v1 = 3
+ * int v2 = btree.value(2).value_or(-1);  // v2 = -1
+ * btree.deleteKey(1);  // delete the (1, 3) pair
+ * v1 = btree.value(1).value_or(-1);  // now v1 is -1
+*/
+template<typename K, typename V, int B>
+class BTree {
+public:
+    friend class BTreeNode<K, V, B>;
+
+    BTree() : root_(this) {}
+
+    /**
+     * Whether
+    */
+    bool contains(const K& key) const {
+        return root_.contains(key);
+    }
+
+    std::optional<V> value(const K& key) const {
+        return root_.value(key);
+    }
+
+    void insert(const K& key, const V& value) {
+        root_.insert(key, value);
+    }
+
+    void deleteKey(const K& key) {
+        root_.deleteKey(key, nullptr, -1);
+    }
+
+    // Debugging & performance analysis utilities
+
+    /**
+     * Prints the keys in the BTree using a level order traversal, using a * for
+     * tombstones.
+     * Useful for visualizing and debugging the internals.
+    */
+    void printKeys(bool includeTombstones=false) {
+        printLevelOrder(true, includeTombstones);
+    }
+
+    /**
+     * Prints the values in the BTree using a level order traversal, using a *
+     * for tombstones.
+     * Useful for visualizing and debugging the internals.
+    */
+    void printValues(bool includeTombstones=true) {
+        printLevelOrder(false, includeTombstones);
+    }
+
+    // The number of tombstones in the BTree.
+    int tombstones() const {
+        return tombstones_;
+    }
+
+protected:
+    // Get the parent of the node containing the given key
+    // This pointer is invalidated by any modification to the tree
+    BTreeNode<K, V, B>* parent(const K& key) {
+        BTreeNode<K, V, B> *p = nullptr, *c = &root_;
+        while (true) {
+            auto [owns, idx] = c->ownsKey(key);
+            if (owns) return p;
+            if (c->isLeaf()) return nullptr;
+            p = c;
+            c = &c->children_[idx];
+        }
+    }
+
+    void splitRoot() {
+        // The root has requested to be split, so we first create a new root to 
+        // replace the old root, and then forward the request to the new root
+        BTreeNode<K, V, B> temp = root_;
+        root_ = BTreeNode<K, V, B>(this);
+        root_.children_.push_back(temp);
+        auto& oldRoot = root_.children_[0];
+        return root_.splitChild(oldRoot.midKey(), oldRoot.midValue());
+    }
+
+    void deleteFromRoot(int keyIdx) {
+        // tombstone
+        auto& value = root_.values_[keyIdx];
+        tombstones_ += value.has_value();
+        value = std::optional<V>();
+    }
+
+    void printLevelOrder(bool printKeys, bool includeTombstones) {
+        std::string s = (printKeys ? "keys" : "values");
+        std::cout << "\n\nPrinting " << s << " (level-order): \n\n";
+        std::deque<std::pair<BTreeNode<K, V, B>, int>> q;
+        int currLevel = 0;
+        q.emplace_back(root_, currLevel);
+        while(q.size()) {
+            auto [currNode, newLevel] = q.front();
+            q.pop_front();
+            if (newLevel > currLevel) {
+                std::cout << "\n";
+                currLevel = newLevel;
+            }
+            currNode.print(printKeys, includeTombstones);
+            for (const auto& child : currNode.children_) {
+                q.emplace_back(child, currLevel+1);
+            }
+        }
+        std::cout << "\n\n";
+    }
+    
+    BTreeNode<K, V, B> root_;
+    int tombstones_ = 0;
+};  // class BTree
+
+/**
+ * The BTreeNode class implements the internals of a B-Tree.
  * 
  * Invariants:
  * Operations all maintain the following invariants.
  * 1. New keys are always inserted into leaf nodes 
  * 2. All non-leaf nodes satisfy numChildren() == numKeys()+1
- * 3. 0 <= numKeys() < B, EXCEPT during certain intermediate stages where
- *    numKeys() is temporarily B. A node containing B keys is called full.
+ * 3. kMinKeys <= numKeys() < B, EXCEPT during certain intermediate stages where
+ *    numKeys() is temporarily B. A node containing B keys is called full. 
+ *    kMinKeys is defined as ceil(B/2)-1.
  * 4. numKeys() == B will trigger a split. The splitting of a node is owned by
  *    the parent of the node. 
  * 5. For non-leaves, numKeys() == B can only occur due to a promotion of a
@@ -25,10 +151,6 @@
  * exception; the root is owned by the owning BTree. All nodes contain a pointer
  * to the owning BTree.
 */
-
-template<typename K, typename V, int B>
-class BTree;  // Forward declaration of BTree
-
 template<typename K, typename V, int B>
 class BTreeNode {
 public:
@@ -351,102 +473,3 @@ protected:
     std::vector<K> keys_;  // keys stored in this node. At most B-1
     std::vector<std::optional<V>> values_;  // values stored in this node
 };  // class BTreeNode
-
-/**
- * Manages the root of the B-Tree. This is the class clients use.
-*/
-template<typename K, typename V, int B>
-class BTree {
-public:
-    friend class BTreeNode<K, V, B>;
-
-    BTree() : root_(this) {}
-
-    bool contains(const K& key) const {
-        return root_.contains(key);
-    }
-
-    std::optional<V> value(const K& key) const {
-        return root_.value(key);
-    }
-
-    void insert(const K& key, const V& value) {
-        root_.insert(key, value);
-    }
-
-    void deleteKey(const K& key) {
-        root_.deleteKey(key, nullptr, -1);
-    }
-
-    // Get the parent of the node containing the given key
-    // This pointer is invalidated by any modification to the tree
-    BTreeNode<K, V, B>* parent(const K& key) {
-        BTreeNode<K, V, B> *p = nullptr, *c = &root_;
-        while (true) {
-            auto [owns, idx] = c->ownsKey(key);
-            if (owns) return p;
-            if (c->isLeaf()) return nullptr;
-            p = c;
-            c = &c->children_[idx];
-        }
-    }
-
-    // Debugging & performance analysis utilities
-
-    /**
-     * Prints all the keys in the B-Tree using a level order traversal.
-    */
-    void printKeys(bool includeTombstones=false) {
-        printLevelOrder(true, includeTombstones);
-    }
-    
-    void printValues(bool includeTombstones=true) {
-        printLevelOrder(false, includeTombstones);
-    }
-
-    int tombstones() const {
-        return tombstones_;
-    }
-
-protected:
-    void splitRoot() {
-        // The root has requested to be split, so we first create a new root to 
-        // replace the old root, and then forward the request to the new root
-        BTreeNode<K, V, B> temp = root_;
-        root_ = BTreeNode<K, V, B>(this);
-        root_.children_.push_back(temp);
-        auto& oldRoot = root_.children_[0];
-        return root_.splitChild(oldRoot.midKey(), oldRoot.midValue());
-    }
-
-    void deleteFromRoot(int keyIdx) {
-        // tombstone
-        auto& value = root_.values_[keyIdx];
-        tombstones_ += value.has_value();
-        value = std::optional<V>();
-    }
-
-    void printLevelOrder(bool printKeys, bool includeTombstones) {
-        std::string s = (printKeys ? "keys" : "values");
-        std::cout << "\n\nPrinting " << s << " (level-order): \n\n";
-        std::deque<std::pair<BTreeNode<K, V, B>, int>> q;
-        int currLevel = 0;
-        q.emplace_back(root_, currLevel);
-        while(q.size()) {
-            auto [currNode, newLevel] = q.front();
-            q.pop_front();
-            if (newLevel > currLevel) {
-                std::cout << "\n";
-                currLevel = newLevel;
-            }
-            currNode.print(printKeys, includeTombstones);
-            for (const auto& child : currNode.children_) {
-                q.emplace_back(child, currLevel+1);
-            }
-        }
-        std::cout << "\n\n";
-    }
-    
-    BTreeNode<K, V, B> root_;
-    int tombstones_ = 0;
-};  // class BTree
