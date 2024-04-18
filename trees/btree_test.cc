@@ -208,6 +208,7 @@ void testDeleteBasic(int n) {
 }
 
 void testDeleteLarge(int n) {
+    std::cout << "Running testDeleteLarge with n=" << n << std::endl; 
     RandomGenerator rg;
     std::vector<int> vec = rg.randomPermutation(n);
     BTree<int, int, 256> btree;
@@ -233,7 +234,7 @@ void testDeleteLarge(int n) {
     auto btreeEnd = hr_clock::now();
     milli btreeDuration = btreeEnd - btreeStart;
     std::cout << "BTree delete duration (n=" << n << "): " << btreeDuration.count() << " ms" << std::endl;
-    
+    std::cout << "Num tombstones in BTree: " << btree.tombstones() << std::endl;
 }
 
 void testMixedWorkload(
@@ -307,9 +308,9 @@ int main() {
     // testLargeInsert(1000000, 100000000);
     // testReadIntensive(10000, 1000000, 1000000);
     // testDeleteBasic(10);
-    // testDeleteLarge(1e6);
-    testMixedWorkload(1e7, 1e7, 1e7, 1e6);
+    testDeleteLarge(1e6);
+    // testMixedWorkload(1e7, 1e7, 1e7, 1e6);
     // Delete heavy
-    testMixedWorkload(1e7, 1e7, 1e8, 1e8);
+    // testMixedWorkload(1e7, 1e7, 1e8, 1e8);
     return 0;
 }
