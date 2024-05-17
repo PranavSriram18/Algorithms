@@ -4,7 +4,13 @@
 
 #include "prime_sieve.hh"
 
-int main() {
+/**
+ * Usage:
+ * g++ prime_sieve_test.cc -o prime_sieve_test -std=c++20 -O3
+ * ./prime_sieve_test
+*/
+
+void test0() {
     auto start = std::chrono::high_resolution_clock::now();
     PrimeSieve sieve(1e8);
     auto end = std::chrono::high_resolution_clock::now();
@@ -24,6 +30,19 @@ int main() {
         std::cout << "Num primes under " << val << ": " << sieve.numPrimesAtMost(
             val) << std::endl;
     }
+}
 
+void testLarge() {
+    auto start = std::chrono::high_resolution_clock::now();
+    PrimeSieve sieve(1e9);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+        end - start).count();
+    std::cout << "Constructed PrimeSieve in " << duration << " milliseconds" << std::endl;
+}
+
+int main() {
+    // test0();
+    testLarge();
     return 0;
 }
