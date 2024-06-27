@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <functional>
 #include <utility>
 #include <vector>
@@ -28,14 +29,16 @@ public:
         while (m_ < n_) {
             m_ <<= 1;
         }
+        data_ = data;
+        data_.resize(m_);
         stree_.resize(2 * m_);
         idxToSegment_.resize(m_);
         binOp_ = binOp;
-        populateStree(1, data);
+        populateStree(1);
         populateIdxToSegment(1);
     }
 
-    // Update data[idx] := newVal
+    // Update data_[idx] := newVal
     // Time complexity: O(log n)
     void update(int idx, T newVal) {
         assert(0 <= idx && idx < m_);
@@ -43,7 +46,7 @@ public:
         stree_[node] = newVal;
         node = parent(node);
         while(node >= 1) {
-            stree_[node] = binOp_(lc(node), rc(node));
+            stree_[node] = binOp_(stree_[lc(node)], stree_[rc(node)]);
             node = parent(node);
         }
     }
@@ -54,12 +57,12 @@ public:
     }
 
 private:
-    T populateStree(int node, const std::vector<T>& data) {
+    T populateStree(int node) {
         if (isLeaf(node)) {
-            return stree_[node] = data[node-m_];
+            return stree_[node] = data_[node-m_];
         }
         return stree_[node] = binOp_(
-            populateStree(lc(node), data), populateStree(rc(node), data)
+            populateStree(lc(node)), populateStree(rc(node))
         );
     }
 
@@ -67,35 +70,35 @@ private:
         if (isLeaf(node)) {
             return {node - m_, node - m_};
         }
-        Interval leftInterval = populateIdxToSegment(lc(node));
-        Interval rightInterval = populateIdxToSegment(rc(node));
-        return idxToSegment_[node] = {leftInterval.first, rightInterval.second};
+        auto [leftLeft, leftRight] = populateIdxToSegment(lc(node));
+        auto [rightLeft, rightRight] = populateIdxToSegment(rc(node));
+        return idxToSegment_[node] = {leftLeft, rightRight};
     }
 
     // Wrapper for query, taking root of subtree containing query as 
     // additional parameter
     T query(int node, int qLeft, int qRight) {
-        // Base case for leaf nodes
-        if (isLeaf(node)) {
+        auto [leftLeft, rightRight] = segment(node);
+        // Terminate recursion on perfect overlap
+        if (qLeft == leftLeft && qRight == rightRight) {
             return stree_[node];
         }
 
-        // Recursively forward queries to children
-        Interval leftInterval = segment(lc(node));
-        if (qRight <= leftInterval.second) {
+        // 3 other cases: query contained in left subtree, 
+        // query contained in right subtree, and query overlaps both subtrees
+        auto [_leftLeft, leftRight] = segment(lc(node));
+        auto [rightLeft, _rightRight] = segment(rc(node));
+        if (qRight <= leftRight) {
             return query(lc(node), qLeft, qRight);
-        }
-        Interval rightInterval = segment(rc(node));
-        if (qLeft >= rightInterval.first) {
+        } else if (qLeft >= rightLeft) {
             return query(rc(node), qLeft, qRight);
-        }
-        T leftResult = query(lc(node), qLeft, leftInterval.second);
-        T rightResult = query(rc(node), rightInterval.first, qRight);
+        } 
+        T leftResult = query(lc(node), qLeft, leftRight);
+        T rightResult = query(rc(node), rightLeft, qRight);
         return binOp_(leftResult, rightResult);
     }
 
     // Helpers
-
     Interval segment(int node) {
         if (isLeaf(node)) {
             return {node - m_, node - m_};
@@ -123,6 +126,8 @@ private:
 
     int n_;  // number of entries in input data
     int m_ = 1;  // smallest power of 2 geq n_. Number of leaves in segment tree
+
+    std::vector<T> data_;  // copy of input data, padded to length m_
 
     // array of length 2 * m_ representing the segment tree
     // root is stored in index 1, and ordering is based on level-order traversal

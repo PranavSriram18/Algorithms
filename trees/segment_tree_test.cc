@@ -5,7 +5,7 @@
 
 /** 
  * Usage: 
- * > g++ segment_tree_test.cc -o segment_tree_test -std=c++17
+ * > g++ segment_tree_test.cc -o segment_tree_test -std=c++20
  * > ./segment_tree_test
  */ 
 
