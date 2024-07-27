@@ -2,7 +2,10 @@ from collections import deque
 from typing import List
 
 """ 
-Scratch:
+Problem Source: https://leetcode.com/problems/cracking-the-safe/description/
+Level: LC Hard
+
+Overview:
 We model this problem as finding an Eulerian circuit in the following directed
 graph.
 Nodes: all strings of length (n-1) [k^(n-1) nodes.
