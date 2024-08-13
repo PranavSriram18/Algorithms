@@ -114,10 +114,15 @@ def kth_smallest_custom(nums, k):
     return heapq.nsmallest(k, nums, key=lambda x: some_function(x))[-1]
 
 ## BISECTION
-
-# bisect_left(arr, x): if i is returned then: 
-# * arr[0]...arr[i-1] are strictly less than arr[i]
-# * arr[i]...arr[-1] are strictly greater than arr[i]
+"""
+bisect_left(arr, x): if i is returned then: 
+* arr[0]...arr[i-1] are strictly less than x
+* arr[i]...arr[-1] are geq than arr[i]
+bisect_left is thus the first possible insertion point
+meanwhile, for bisect_right, if i is returned, then arr[i] > x (or, i == len(arr))
+i is the first entry for which the value exceeds x
+it represents the last possible insertion point for x
+"""
 
 def find_closest(sorted_list, x):
     pos = bisect.bisect_left(sorted_list, x)
@@ -127,10 +132,7 @@ def find_closest(sorted_list, x):
         return sorted_list[-1]
     before = sorted_list[pos - 1]
     after = sorted_list[pos]
-    if after - x < x - before:
-        return after
-    else:
-        return before
+    return after if after - x < x - before else before
     
 
 ## BIT OPS
@@ -144,7 +146,6 @@ def floor_log2(n):
     return n.bit_length() - 1
 
 ## GENERATOR EXPRESSIONS
-# cheat_sheet.py - Generator Expression Patterns
 
 def has_any_even(numbers):
     """Check if any element is even."""
