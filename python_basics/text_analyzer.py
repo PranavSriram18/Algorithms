@@ -1,3 +1,5 @@
+from collections import Counter, defaultdict
+import string
 
 """ 
 Create a class TextAnalyzer with a method analyze that takes a filename as input. The method should:

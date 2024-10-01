@@ -10,9 +10,15 @@
  This code is inspired by a question posted to the Facebook group
  "Actually good math problems." Our modified problem is as follows.
  
- Tim is putting pins on a circle of radius d in R^2. First, he puts one at a uniformly random position. Then, Tim uniformly randomly chooses a point inside disk until he happens to choose one that is at least distance 1 from every other previously pinned point, and pins that point. He repeats this process until it is impossible to pin any more points in this way. What is the expected value of the number of pinned points? 
+ Tim is putting pins on a circle of radius d in R^2. First, he puts one at a 
+ uniformly random position. Then, Tim uniformly randomly chooses a point inside 
+ disk until he happens to choose one that is at least distance 1 from every 
+ other previously pinned point, and pins that point. He repeats this process 
+ until it is impossible to pin any more points in this way. What is the expected
+ value of the number of pinned points?
   
- This class allows approximately solving this problem using a Monte Carlo simulation.
+ This class allows approximately solving this problem using a Monte Carlo 
+ simulation.
 */
 class RandomPointSimulator {
 public:

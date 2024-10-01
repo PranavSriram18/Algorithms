@@ -16,7 +16,7 @@ public:
             sizes_[i] = 1;
         }
     }
-    
+
     int repr(int u) {
         int& parent = parents_[u];
         return (parent == u) ? u : parent = repr(parent);    
@@ -49,6 +49,6 @@ public:
     }
     
 private:
-    std::vector<int> parents_;
+    std::vector<int> parents_;  // ith entry is parent of ith node
     std::vector<int> sizes_;
 };  // class UnionFind
