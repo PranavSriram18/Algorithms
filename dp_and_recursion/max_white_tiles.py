@@ -1,3 +1,6 @@
+import itertools 
+from typing import List
+
 """
 Scratch:
 * can always align with the left end of a white segment

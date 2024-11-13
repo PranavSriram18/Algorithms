@@ -9,11 +9,16 @@ data structure, or problem.
 This is a work in progress.
 
 **Directory overview**
+combinatorics: Problems involving permutations, combinations, subsets,
+enumeration, and other combinatorial structures.
+
 concurrency: Algorithms and constructs involving multithreading and/or
     concurrency control, e.g. solutions to the Dining Philosophers problem.
 
 dp_and_recursion: Problems involving recursive structure in various forms (
     standard recursion, dynamic programming, DFS, topological sorting, divide & conquer, etc.)
+
+design: Data structure design and simulation problems.
 
 experiments: Simulations and experiments, mostly related to some interesting 
     math problem (e.g. Monte Carlo simulations to understand the behavior of some random process).
@@ -29,6 +34,10 @@ graphs: Common graph data structures (like UnionFind), and solutions to several
     algorithmic problems involving techniques related to graphs (BFS, shortest
     paths, etc.)
 
+linear structures: Problems involving reasoning about linear structures (like 
+    arrays). Concepts/techniques include two-pointers, prefix sums, sliding 
+    windows, rolling hashes, etc.
+
 low_level: Problems dealing with low-level manipulation of bits, pointers, and 
     memory.
 
@@ -39,7 +48,7 @@ number_theory: Problems related to number theory, e.g. primality testing,
 
 parsing: Problems involving strings, expressions, and parsing.
 
-permutations: Problems involving permutations.
+python_basics: Basic exercises for getting up to speed with Python.
 
 strings: String processing algorithms and data structures.
 

@@ -4,6 +4,7 @@ import copy
 from functools import reduce
 import heapq
 import itertools
+import operator
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
@@ -60,7 +61,6 @@ def merge_all(dict_list: List[dict]) -> dict:
     return reduce(lambda d0, d1: d0 | d1, dict_list)
 
 ## TOP-K & Heaps
-
 
 """
 Heap documentation: 
@@ -232,3 +232,19 @@ def use_groupby(items: List[Any], key_func: Callable[[Any], Any]) -> List[Tuple[
     sorted_items = sorted(items, key=key_func)
     # Group the sorted items
     return [(key, list(group)) for key, group in itertools.groupby(sorted_items, key=key_func)]
+
+
+## MISC
+def pow_mod(base, exp, mod):
+    """ (base ^ exp) % mod"""    
+    return pow(base, exp, mod)
+
+def runnning_sum(nums: List[Any]) -> List[Any]:
+    return list(itertools.accumulate(nums))  # ith entry includes nums[i]
+
+def pfx_sum(nums: List[Any]) -> List[Any]:
+    return [0] + runnning_sum(nums)  # ith entry excludes nums[i]
+
+def running_prod(nums: List[Any]) -> List[Any]:
+    return list(itertools.accumulate(nums, operator.mul))
+
