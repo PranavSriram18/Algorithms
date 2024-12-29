@@ -1,4 +1,12 @@
-from typing import List
+from typing import List, Tuple
+
+import cProfile
+import math
+import pstats
+import random
+import sys
+import trace
+from pstats import SortKey
 
 """
 Source: https://leetcode.com/problems/number-of-good-paths/description/
@@ -82,3 +90,34 @@ class Solution:
         for u, v in edges:
             small, large = (u, v) if (self.vals[u], u) < (self.vals[v], v) else (v, u)
             self.edges[large].append(small)
+
+def generate_input(n: int, k: int) -> Tuple[List[int], List[List[int]]]:
+    """
+    Generate a random tree with n nodes taking values in [0, k).
+    """
+    vals = [random.randint(0, k) for _ in range(n)]
+    edges = []
+    for u in range(1, n):
+        v = random.randint(0, u-1)
+        edges.append((u, v))
+    return vals, edges
+
+def profile():
+    print("Profiling num_good_paths with 100000 nodes and 100 possible values")
+    vals, edges = generate_input(100000, 100)
+    profiler = cProfile.Profile()
+    sol = Solution()
+    profiler.enable()
+    res = sol.numberOfGoodPaths(vals, edges)
+    profiler.disable()
+
+    print(f"Number of good paths: {res}")
+
+    # Save stats to file
+    profiler.dump_stats('profile_output.stats')
+
+    stats = pstats.Stats(profiler).sort_stats(SortKey.CUMULATIVE)
+    stats.print_stats()
+
+if __name__ == "__main__":
+    profile()
